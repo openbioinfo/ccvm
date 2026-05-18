@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PackageVersion {
     #[serde(default)]
     #[allow(dead_code)]
@@ -37,17 +38,17 @@ pub struct ResolvedPackage {
     pub shasum: String,
 }
 
-fn platform_key() -> &'static str {
+fn platform_key() -> Result<&'static str> {
     let arch = std::env::consts::ARCH;
     let os = std::env::consts::OS;
 
     match (os, arch) {
-        ("windows", "x86_64") | ("windows", "x86") => "win32-x64",
-        ("macos", "aarch64") | ("macos", "arm64") => "darwin-arm64",
-        ("macos", "x86_64") => "darwin-x64",
-        ("linux", "x86_64") => "linux-x64",
-        ("linux", "aarch64") => "linux-arm64",
-        _ => panic!("unsupported platform: {}/{}", os, arch),
+        ("windows", "x86_64") | ("windows", "x86") => Ok("win32-x64"),
+        ("macos", "aarch64") | ("macos", "arm64") => Ok("darwin-arm64"),
+        ("macos", "x86_64") => Ok("darwin-x64"),
+        ("linux", "x86_64") => Ok("linux-x64"),
+        ("linux", "aarch64") => Ok("linux-arm64"),
+        _ => bail!("unsupported platform: {}/{}", os, arch),
     }
 }
 
@@ -87,7 +88,7 @@ pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPa
         .with_context(|| "failed to parse package metadata JSON")?;
 
     // Find the platform-specific optional dependency
-    let platform_name = format!("@anthropic-ai/claude-code-{}", platform_key());
+    let platform_name = format!("@anthropic-ai/claude-code-{}", platform_key()?);
 
     let platform_version = main_pkg
         .optional_dependencies
