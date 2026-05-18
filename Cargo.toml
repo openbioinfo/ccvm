@@ -1,0 +1,29 @@
+[package]
+name = "ccvm"
+version = "0.1.0"
+edition = "2021"
+description = "Claude Code Version Manager — npm registry edition"
+
+[[bin]]
+name = "ccvm"
+path = "src/main.rs"
+
+[[bin]]
+name = "ccvm-shim"
+path = "src/shim.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["stream", "rustls-tls", "json"], default-features = false }
+tokio = { version = "1", features = ["full"] }
+indicatif = "0.17"
+sha2 = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+flate2 = "1"
+tar = "0.4"
+dirs = "6"
+toml = "0.8"
+anyhow = "1"
+semver = "1"
+hex = "0.4"
