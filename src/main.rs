@@ -141,10 +141,50 @@ async fn run() -> Result<()> {
             }
         }
         Commands::List => {
-            not_yet("list")
+            let versions_dir = config::versions_dir();
+            if !versions_dir.exists() {
+                println!("no versions installed. Run 'ccvm install <version>' first.");
+            } else {
+                let active = std::fs::read_to_string(config::current_file())
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
+                let mut versions = Vec::new();
+                if let Ok(entries) = std::fs::read_dir(&versions_dir) {
+                    for entry in entries.flatten() {
+                        if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                            if let Some(name) = entry.file_name().to_str() {
+                                versions.push(name.to_string());
+                            }
+                        }
+                    }
+                }
+                if versions.is_empty() {
+                    println!("no versions installed. Run 'ccvm install <version>' first.");
+                } else {
+                    versions.sort_by(|a, b| {
+                        semver::Version::parse(b).unwrap_or_else(|_| semver::Version::new(0, 0, 0))
+                            .cmp(&semver::Version::parse(a).unwrap_or_else(|_| semver::Version::new(0, 0, 0)))
+                    });
+                    for v in &versions {
+                        if *v == active {
+                            println!("* {}", v);
+                        } else {
+                            println!("  {}", v);
+                        }
+                    }
+                }
+            }
         }
         Commands::ListRemote => {
-            not_yet("list-remote")
+            match list_remote(&registry).await {
+                Ok(versions) => {
+                    for v in &versions {
+                        println!("{}", v);
+                    }
+                }
+                Err(e) => eprintln!("error: {}", e),
+            }
         }
         Commands::Current => {
             let path = config::current_file();
@@ -163,7 +203,25 @@ async fn run() -> Result<()> {
             }
         }
         Commands::Uninstall { version } => {
-            not_yet_with_arg("uninstall", &version)
+            let active = std::fs::read_to_string(config::current_file())
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            if version == active {
+                eprintln!(
+                    "cannot uninstall currently active version {}. Run 'ccvm use <other>' first.",
+                    version
+                );
+            } else {
+                let version_dir = config::versions_dir().join(&version);
+                if version_dir.exists() {
+                    std::fs::remove_dir_all(&version_dir)
+                        .with_context(|| format!("failed to uninstall {}", version))?;
+                    println!("uninstalled claude-code {}", version);
+                } else {
+                    eprintln!("version {} is not installed", version);
+                }
+            }
         }
         Commands::Pin { version } => {
             let v = if let Some(ref v) = version {
@@ -206,13 +264,6 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
-fn not_yet(cmd: &str) {
-    println!("not yet implemented: ccvm {}", cmd);
-}
-
-fn not_yet_with_arg(cmd: &str, arg: &str) {
-    println!("not yet implemented: ccvm {} {}", cmd, arg);
-}
 
 fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
     let versions_dir = config::versions_dir();
@@ -268,6 +319,39 @@ fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
     }
 
     Ok(resolved)
+}
+
+async fn list_remote(registry: &str) -> anyhow::Result<Vec<String>> {
+    let client = reqwest::Client::new();
+    let url = format!(
+        "{}/@anthropic-ai/claude-code",
+        registry.trim_end_matches('/')
+    );
+
+    let packument: serde_json::Value = client
+        .get(&url)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .with_context(|| format!("failed to fetch from {}", url))?
+        .error_for_status()
+        .with_context(|| format!("failed to access registry at {}", registry))?
+        .json()
+        .await
+        .with_context(|| "failed to parse registry response")?;
+
+    let mut versions: Vec<String> = packument["versions"]
+        .as_object()
+        .map(|o| o.keys().cloned().collect())
+        .unwrap_or_default();
+
+    versions.sort_by(|a, b| {
+        semver::Version::parse(b)
+            .unwrap_or_else(|_| semver::Version::new(0, 0, 0))
+            .cmp(&semver::Version::parse(a).unwrap_or_else(|_| semver::Version::new(0, 0, 0)))
+    });
+
+    Ok(versions)
 }
 
 async fn npm_fallback(version: &str) -> Result<(), anyhow::Error> {
