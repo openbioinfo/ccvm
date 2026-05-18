@@ -1,5 +1,6 @@
 mod config;
 mod download;
+mod extract;
 mod registry;
 mod setup;
 
@@ -103,7 +104,16 @@ async fn run() -> Result<()> {
                         .unwrap_or("package.tgz");
                     let cache_path = config::cache_dir().join(filename);
                     match download::download_tarball(&pkg.tarball_url, &cache_path).await {
-                        Ok(path) => println!("downloaded to {}", path.display()),
+                        Ok(path) => {
+                            match extract::extract_and_verify(
+                                &path,
+                                &pkg.shasum,
+                                &pkg.version,
+                            ) {
+                                Ok(_dest) => {} // message printed by extract
+                                Err(e) => eprintln!("error: {}", e),
+                            }
+                        }
                         Err(e) => eprintln!("error: {}", e),
                     }
                 }
