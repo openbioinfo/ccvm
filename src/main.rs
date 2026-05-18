@@ -1,4 +1,5 @@
 mod config;
+mod download;
 mod registry;
 mod setup;
 
@@ -94,7 +95,17 @@ async fn run() -> Result<()> {
                     println!("tarball: {}", pkg.tarball_url);
                     println!("shasum:  {}", pkg.shasum);
                     println!();
-                    println!("note: download and extraction not yet implemented");
+                    // Derive cache filename from tarball URL
+                    let filename = pkg
+                        .tarball_url
+                        .rsplit('/')
+                        .next()
+                        .unwrap_or("package.tgz");
+                    let cache_path = config::cache_dir().join(filename);
+                    match download::download_tarball(&pkg.tarball_url, &cache_path).await {
+                        Ok(path) => println!("downloaded to {}", path.display()),
+                        Err(e) => eprintln!("error: {}", e),
+                    }
                 }
                 Err(e) => {
                     eprintln!("error: {}", e);
