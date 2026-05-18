@@ -14,7 +14,7 @@ Claude Code distributes native binaries via npm optionalDependencies starting fr
 git clone https://github.com/openbioinfo/ccvm.git
 cd ccvm
 cargo build --release
-cargo install .
+cargo install --path ./
 ```
 
 ### Setup
