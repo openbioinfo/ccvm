@@ -282,8 +282,11 @@ fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
         let entry = entry?;
         if entry.file_type()?.is_dir() {
             if let Some(dir_name) = entry.file_name().to_str() {
-                if dir_name.starts_with(&version) {
-                    candidates.push(dir_name.to_string());
+                let dir_name = dir_name.to_string();
+                if version == "latest" {
+                    candidates.push(dir_name);
+                } else if dir_name.starts_with(version) {
+                    candidates.push(dir_name);
                 }
             }
         }
@@ -309,7 +312,7 @@ fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
 
     let resolved = candidates[0].clone();
 
-    if candidates.len() > 1 {
+    if candidates.len() > 1 && version != "latest" {
         eprintln!(
             "note: multiple versions match '{}': {}, using latest ({})",
             version,
