@@ -4,7 +4,7 @@ mod extract;
 mod registry;
 mod setup;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -96,7 +96,6 @@ async fn run() -> Result<()> {
                     println!("tarball: {}", pkg.tarball_url);
                     println!("shasum:  {}", pkg.shasum);
                     println!();
-                    // Derive cache filename from tarball URL
                     let filename = pkg
                         .tarball_url
                         .rsplit('/')
@@ -110,7 +109,7 @@ async fn run() -> Result<()> {
                                 &pkg.shasum,
                                 &pkg.version,
                             ) {
-                                Ok(_dest) => {} // message printed by extract
+                                Ok(_dest) => {}
                                 Err(e) => eprintln!("error: {}", e),
                             }
                         }
@@ -118,7 +117,16 @@ async fn run() -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    eprintln!("error: {}", e);
+                    let msg = e.to_string();
+                    if msg.contains("predates native binary") {
+                        eprintln!("{}", msg);
+                        eprintln!();
+                        if let Err(e) = npm_fallback(&version).await {
+                            eprintln!("error: {}", e);
+                        }
+                    } else {
+                        eprintln!("error: {}", msg);
+                    }
                 }
             }
         }
@@ -166,4 +174,88 @@ fn not_yet(cmd: &str) {
 
 fn not_yet_with_arg(cmd: &str, arg: &str) {
     println!("not yet implemented: ccvm {} {}", cmd, arg);
+}
+
+async fn npm_fallback(version: &str) -> Result<(), anyhow::Error> {
+    // Check for Node.js
+    let node_check = std::process::Command::new("node")
+        .arg("--version")
+        .output();
+    if node_check.is_err() {
+        anyhow::bail!(
+            "Node.js is required for versions < 2.1.113 but was not found.\n\
+             Install Node.js from https://nodejs.org or use a version >= 2.1.113."
+        );
+    }
+
+    // Prompt user
+    use std::io::{self, Write as _};
+    print!(
+        "Continue with npm install? Requires Node.js + npm. [y/N] "
+    );
+    io::stdout().flush().ok();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).ok();
+    let input = input.trim().to_lowercase();
+
+    if input != "y" && input != "yes" {
+        println!("installation cancelled");
+        return Ok(());
+    }
+
+    // Create temp directory
+    let temp_dir = std::env::temp_dir().join(format!("ccvm-npm-{}", version));
+    if temp_dir.exists() {
+        std::fs::remove_dir_all(&temp_dir).ok();
+    }
+    std::fs::create_dir_all(&temp_dir)
+        .with_context(|| format!("failed to create temp directory: {}", temp_dir.display()))?;
+
+    println!("running npm install @anthropic-ai/claude-code@{}...", version);
+    let status = std::process::Command::new("npm")
+        .args([
+            "install",
+            &format!("@anthropic-ai/claude-code@{}", version),
+            "--prefix",
+        ])
+        .arg(&temp_dir)
+        .status()
+        .with_context(|| "failed to run npm. Is npm installed?")?;
+
+    if !status.success() {
+        // Clean up temp dir on failure
+        std::fs::remove_dir_all(&temp_dir).ok();
+        anyhow::bail!("npm install failed with exit code: {:?}", status.code());
+    }
+
+    // Locate the installed binary
+    let binary_path = temp_dir
+        .join("node_modules")
+        .join("@anthropic-ai")
+        .join("claude-code")
+        .join("claude.exe");
+
+    if !binary_path.exists() {
+        std::fs::remove_dir_all(&temp_dir).ok();
+        anyhow::bail!("npm install completed but claude binary not found");
+    }
+
+    // Copy to versions directory
+    let dest_dir = config::versions_dir().join(version);
+    std::fs::create_dir_all(&dest_dir)
+        .with_context(|| format!("failed to create version directory: {}", dest_dir.display()))?;
+    let dest_binary = dest_dir.join("claude.exe");
+    std::fs::copy(&binary_path, &dest_binary)
+        .with_context(|| format!("failed to copy binary to {}", dest_binary.display()))?;
+
+    // Clean up temp directory
+    std::fs::remove_dir_all(&temp_dir).ok();
+
+    println!(
+        "installed claude-code {} to {}",
+        version,
+        dest_dir.display()
+    );
+
+    Ok(())
 }
