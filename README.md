@@ -24,7 +24,7 @@ cargo install --path ./
 ccvm setup
 ```
 
-Add `~/.ccvm/bin/` to your PATH, then restart your terminal.
+will add `~/.ccvm/bin/` to your PATH, then restart your terminal.
 
 ### Install and use
 
