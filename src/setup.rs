@@ -14,7 +14,7 @@ pub fn run() -> Result<()> {
     }
 
     // Copy shim binary to ~/.ccvm/bin/
-    let shim_dest = config::bin_dir().join("ccvm-shim.exe");
+    let shim_dest = config::bin_dir().join("claude.exe");
     if !shim_dest.exists() {
         match copy_shim(&shim_dest) {
             Ok(_) => println!("installed shim to {}", shim_dest.display()),
@@ -58,7 +58,7 @@ fn copy_shim(dest: &PathBuf) -> Result<()> {
             .with_context(|| format!("failed to copy shim from {}", shim_src.display()))?;
     } else {
         // Create a placeholder script
-        let placeholder = "@echo off\r\necho ccvm-shim not yet installed. Run 'ccvm setup' again after building.\r\n";
+        let placeholder = "@echo off\r\necho ccvm shim not yet installed. Run 'ccvm setup' again after building.\r\n";
         fs::write(dest, placeholder)
             .with_context(|| format!("failed to write shim placeholder to {}", dest.display()))?;
     }
