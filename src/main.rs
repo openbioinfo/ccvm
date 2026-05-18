@@ -131,7 +131,14 @@ async fn run() -> Result<()> {
             }
         }
         Commands::Use { version } => {
-            not_yet_with_arg("use", &version)
+            match resolve_fuzzy(&version) {
+                Ok(resolved) => {
+                    std::fs::write(config::current_file(), &resolved)
+                        .with_context(|| "failed to write current version")?;
+                    println!("now using claude-code {}", resolved);
+                }
+                Err(e) => eprintln!("error: {}", e),
+            }
         }
         Commands::List => {
             not_yet("list")
@@ -140,14 +147,45 @@ async fn run() -> Result<()> {
             not_yet("list-remote")
         }
         Commands::Current => {
-            not_yet("current")
+            let path = config::current_file();
+            if path.exists() {
+                let v = std::fs::read_to_string(&path)
+                    .with_context(|| "failed to read current version")
+                    .unwrap_or_default();
+                let v = v.trim();
+                if v.is_empty() {
+                    println!("no version selected. Run 'ccvm use <version>' first.");
+                } else {
+                    println!("{}", v);
+                }
+            } else {
+                println!("no version selected. Run 'ccvm use <version>' first.");
+            }
         }
         Commands::Uninstall { version } => {
             not_yet_with_arg("uninstall", &version)
         }
         Commands::Pin { version } => {
-            let v = version.unwrap_or_else(|| "current".to_string());
-            not_yet_with_arg("pin", &v)
+            let v = if let Some(ref v) = version {
+                v.clone()
+            } else {
+                let path = config::current_file();
+                if path.exists() {
+                    std::fs::read_to_string(&path)
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string()
+                } else {
+                    String::new()
+                }
+            };
+            if v.is_empty() {
+                eprintln!("no version selected. Run 'ccvm use <version>' first.");
+            } else {
+                std::fs::write(".ccvmrc", &v)
+                    .with_context(|| "failed to write .ccvmrc")?;
+                println!("pinned claude-code {}", v);
+            }
         }
         Commands::Setup => {
             setup::run()?;
@@ -174,6 +212,62 @@ fn not_yet(cmd: &str) {
 
 fn not_yet_with_arg(cmd: &str, arg: &str) {
     println!("not yet implemented: ccvm {} {}", cmd, arg);
+}
+
+fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
+    let versions_dir = config::versions_dir();
+
+    if !versions_dir.exists() {
+        anyhow::bail!(
+            "no versions installed. Run 'ccvm install {}' first.",
+            version
+        );
+    }
+
+    let mut candidates: Vec<String> = Vec::new();
+    for entry in std::fs::read_dir(&versions_dir)
+        .with_context(|| "failed to read versions directory")?
+    {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            if let Some(dir_name) = entry.file_name().to_str() {
+                if dir_name.starts_with(&version) {
+                    candidates.push(dir_name.to_string());
+                }
+            }
+        }
+    }
+
+    if candidates.is_empty() {
+        anyhow::bail!(
+            "version {} is not installed. Run 'ccvm install {}' first.",
+            version,
+            version
+        );
+    }
+
+    // Sort by semver, pick highest
+    candidates.sort_by(|a, b| {
+        let va = semver::Version::parse(a).ok();
+        let vb = semver::Version::parse(b).ok();
+        match (va, vb) {
+            (Some(va), Some(vb)) => vb.cmp(&va), // descending
+            _ => b.cmp(a), // fallback to string compare
+        }
+    });
+
+    let resolved = candidates[0].clone();
+
+    if candidates.len() > 1 {
+        eprintln!(
+            "note: multiple versions match '{}': {}, using latest ({})",
+            version,
+            candidates.join(", "),
+            resolved
+        );
+    }
+
+    Ok(resolved)
 }
 
 async fn npm_fallback(version: &str) -> Result<(), anyhow::Error> {
