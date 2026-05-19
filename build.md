@@ -1,11 +1,29 @@
-# Build — ccvm Windows 安装包
+# ccvm Windows 安装包
 
-## 前置条件
+## 一条命令安装（推荐）
+
+在 PowerShell 中运行：
+
+```powershell
+irm https://raw.githubusercontent.com/kongdeju/ccvm/master/install.ps1 | iex
+```
+
+默认安装最新版本。如需指定版本：
+
+```powershell
+irm https://raw.githubusercontent.com/kongdeju/ccvm/master/install.ps1 | iex -args "-Version 0.2.0"
+```
+
+安装程序会引导你完成安装，包括自动配置 PATH 和初始化 ccvm。
+
+## 从源码构建
+
+### 前置条件
 
 - [Rust](https://rustup.rs) toolchain
 - [Inno Setup 6](https://jrsoftware.org/isinfo.php)（安装到默认路径即可）
 
-## 构建
+### 构建
 
 ```bash
 powershell.exe -ExecutionPolicy Bypass -File installer/build.ps1
@@ -13,7 +31,7 @@ powershell.exe -ExecutionPolicy Bypass -File installer/build.ps1
 
 输出文件：`target/release/ccvm-setup-X.Y.Z.exe`
 
-## 安装
+### 手动安装
 
 双击 `ccvm-setup-X.Y.Z.exe`，按向导完成安装。
 
@@ -35,4 +53,4 @@ claude
 
 Windows 设置 → 应用 → 搜索 `ccvm` → 卸载。
 
-卸载会自动清理 PATH 中的安装目录条目。`~/.ccvm` 目录（版本缓存）不会被自动删除，如需清理可手动执行 `rm -r ~/.ccvm`。
+卸载时会自动清理 PATH 中的安装目录条目。`~/.ccvm` 目录（版本缓存）不会被自动删除，如需清理可手动执行 `rm -r ~/.ccvm`。
