@@ -8,7 +8,15 @@ Claude Code distributes native binaries via npm optionalDependencies starting fr
 
 ## Quick Start
 
-### Build from source
+### Windows 一条命令安装
+
+```powershell
+irm https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.ps1 | iex
+```
+
+安装后重启终端即可使用。
+
+### 从源码构建
 
 ```bash
 git clone https://github.com/openbioinfo/ccvm.git
