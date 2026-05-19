@@ -16,6 +16,28 @@ irm https://raw.githubusercontent.com/kongdeju/ccvm/master/install.ps1 | iex -ar
 
 安装程序会引导你完成安装，包括自动配置 PATH 和初始化 ccvm。
 
+## 发布
+
+构建完成后，将 `ccvm-setup.exe` 上传到 GitHub Releases：
+
+```bash
+# 1. 构建
+powershell.exe -ExecutionPolicy Bypass -File installer/build.ps1
+
+# 2. 创建 tag 并推送
+git tag v0.1.0
+git push origin v0.1.0
+
+# 3. 创建 GitHub Release 并上传安装包
+gh release create v0.1.0 \
+  target/release/ccvm-setup.exe \
+  target/release/ccvm-setup-0.1.0.exe \
+  --title "v0.1.0" \
+  --notes "Windows 安装包"
+```
+
+上传后，用户即可通过一条命令安装。
+
 ## 从源码构建
 
 ### 前置条件

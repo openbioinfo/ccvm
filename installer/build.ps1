@@ -35,5 +35,8 @@ Write-Host "generating installer to $outputDir ..."
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
 $installer = Join-Path $outputDir "ccvm-setup-$version.exe"
+$installerStable = Join-Path $outputDir "ccvm-setup.exe"
+Copy-Item $installer $installerStable
 Write-Host "`ninstaller: $installer"
+Write-Host "         : $installerStable (for release upload)"
 Write-Host "done."
