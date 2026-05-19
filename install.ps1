@@ -2,7 +2,7 @@ param(
     [string]$Version = "latest"
 )
 
-$repo = "kongdeju/ccvm"
+$repo = "openbioinfo/ccvm"
 
 if ($Version -eq "latest") {
     $url = "https://github.com/$repo/releases/latest/download/ccvm-setup.exe"

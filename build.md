@@ -5,13 +5,13 @@
 在 PowerShell 中运行：
 
 ```powershell
-irm https://raw.githubusercontent.com/kongdeju/ccvm/master/install.ps1 | iex
+irm https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.ps1 | iex
 ```
 
 默认安装最新版本。如需指定版本：
 
 ```powershell
-irm https://raw.githubusercontent.com/kongdeju/ccvm/master/install.ps1 | iex -args "-Version 0.2.0"
+irm https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.ps1 | iex -args "-Version 0.2.0"
 ```
 
 安装程序会引导你完成安装，包括自动配置 PATH 和初始化 ccvm。

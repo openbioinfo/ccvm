@@ -1,6 +1,6 @@
 #define AppName "ccvm"
 #define AppPublisher "ccvm contributors"
-#define AppURL "https://github.com/kongdeju/ccvm"
+#define AppURL "https://github.com/openbioinfo/ccvm"
 #ifndef Version
   #define Version "0.1.0"
 #endif
