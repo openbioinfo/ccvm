@@ -30,6 +30,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "..\target\release\ccvm.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\target\release\ccvm-shim.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\target\release\ccvm-codex-shim.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
 Filename: "{app}\ccvm.exe"; Parameters: "setup"; Flags: nowait postinstall skipifsilent; Description: "Run ccvm setup (initialize directories and shim)"

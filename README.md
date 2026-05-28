@@ -43,6 +43,17 @@ ccvm use 2.1.126           # switch to that version
 claude --version           # shim resolves to the active version
 ```
 
+### Codex support
+
+```bash
+ccvm codex install latest  # install the latest Codex version
+ccvm codex install 0.134.0 # install a specific Codex version
+ccvm codex use 0.134       # switch to that version (fuzzy matching)
+codex --version            # shim resolves to the active Codex version
+```
+
+Codex versions are installed without Node.js by downloading the platform-specific npm tarball for `@openai/codex` and extracting the bundled `vendor/` directory.
+
 ## Commands
 
 | Command | Description |
@@ -55,6 +66,11 @@ claude --version           # shim resolves to the active version
 | `ccvm list-remote` | List all versions available from the registry |
 | `ccvm uninstall <version>` | Remove an installed version |
 | `ccvm pin [version]` | Write `.ccvmrc` to pin the current or specified version |
+| `ccvm codex install <version>` | Install a Codex version (`latest` or e.g. `0.134.0`) |
+| `ccvm codex use <version>` | Switch to an installed Codex version |
+| `ccvm codex list` | List installed Codex versions |
+| `ccvm codex list-remote` | List Codex versions available from the registry |
+| `ccvm codex pin [version]` | Write `.codexvmrc` to pin the current or specified Codex version |
 | `ccvm config registry` | Show the current registry URL |
 | `ccvm config set registry <url>` | Switch the registry mirror |
 

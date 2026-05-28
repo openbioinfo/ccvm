@@ -38,34 +38,51 @@ pub struct ResolvedPackage {
     pub shasum: String,
 }
 
-fn platform_key() -> Result<&'static str> {
-    let arch = std::env::consts::ARCH;
-    let os = std::env::consts::OS;
-
-    match (os, arch) {
-        ("windows", "x86_64") | ("windows", "x86") => Ok("win32-x64"),
-        ("macos", "aarch64") | ("macos", "arm64") => Ok("darwin-arm64"),
-        ("macos", "x86_64") => Ok("darwin-x64"),
-        ("linux", "x86_64") => Ok("linux-x64"),
-        ("linux", "aarch64") => Ok("linux-arm64"),
-        _ => bail!("unsupported platform: {}/{}", os, arch),
-    }
+pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPackage> {
+    resolve_claude_package(registry, version).await
 }
 
-pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPackage> {
+pub async fn resolve_claude_package(registry: &str, version: &str) -> Result<ResolvedPackage> {
+    let platform_name = format!(
+        "@anthropic-ai/claude-code-{}",
+        crate::platform::npm_platform_key()?
+    );
+    resolve_native_package(
+        registry,
+        "@anthropic-ai/claude-code",
+        &platform_name,
+        version,
+        "claude-code",
+    )
+    .await
+}
+
+pub async fn resolve_codex_package(registry: &str, version: &str) -> Result<ResolvedPackage> {
+    let platform_name = format!("@openai/codex-{}", crate::platform::npm_platform_key()?);
+    resolve_native_package(registry, "@openai/codex", &platform_name, version, "codex").await
+}
+
+async fn resolve_native_package(
+    registry: &str,
+    main_package: &str,
+    platform_dependency_name: &str,
+    version: &str,
+    display_name: &str,
+) -> Result<ResolvedPackage> {
     let client = reqwest::Client::new();
 
     // Resolve "latest" to actual version number
     let resolved_version = if version == "latest" {
-        resolve_latest(&client, registry).await?
+        resolve_latest(&client, registry, main_package).await?
     } else {
         version.to_string()
     };
 
     // Fetch the main package metadata
     let main_url = format!(
-        "{}/@anthropic-ai/claude-code/{}",
+        "{}/{}/{}",
         registry.trim_end_matches('/'),
+        main_package,
         &resolved_version
     );
 
@@ -88,21 +105,20 @@ pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPa
         .with_context(|| "failed to parse package metadata JSON")?;
 
     // Find the platform-specific optional dependency
-    let platform_name = format!("@anthropic-ai/claude-code-{}", platform_key()?);
-
     let platform_version = main_pkg
         .optional_dependencies
         .as_ref()
-        .and_then(|deps| deps.get(&platform_name))
+        .and_then(|deps| deps.get(platform_dependency_name))
         .cloned();
 
     match platform_version {
         Some(pv) => {
+            let (platform_package, pv) = parse_platform_spec(platform_dependency_name, &pv);
             // Fetch platform package metadata to get tarball URL and shasum
             let plat_url = format!(
                 "{}/{}/{}",
                 registry.trim_end_matches('/'),
-                platform_name,
+                platform_package,
                 pv
             );
 
@@ -112,13 +128,16 @@ pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPa
                 .send()
                 .await
                 .with_context(|| {
-                    format!("failed to fetch platform package metadata from {}", plat_url)
+                    format!(
+                        "failed to fetch platform package metadata from {}",
+                        plat_url
+                    )
                 })?
                 .error_for_status()
                 .with_context(|| {
                     format!(
                         "platform package {}@{} not found in registry",
-                        platform_name, pv
+                        platform_dependency_name, pv
                     )
                 })?
                 .json()
@@ -128,7 +147,7 @@ pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPa
             let dist = plat_pkg.dist.ok_or_else(|| {
                 anyhow::anyhow!(
                     "platform package {}@{} has no dist info",
-                    platform_name,
+                    platform_dependency_name,
                     pv
                 )
             })?;
@@ -140,20 +159,46 @@ pub async fn resolve_package(registry: &str, version: &str) -> Result<ResolvedPa
             })
         }
         None => {
+            if display_name == "claude-code" {
+                bail!(
+                    "version {} predates native binary distribution and requires Node.js + npm.\n\
+                     Use a version >= 2.1.113, or see 'ccvm install --help' for fallback options.",
+                    resolved_version
+                );
+            }
             bail!(
-                "version {} predates native binary distribution and requires Node.js + npm.\n\
-                 Use a version >= 2.1.113, or see 'ccvm install --help' for fallback options.",
-                resolved_version
+                "{} version {} has no native package for {}",
+                display_name,
+                resolved_version,
+                platform_dependency_name
             );
         }
     }
 }
 
-async fn resolve_latest(client: &reqwest::Client, registry: &str) -> Result<String> {
-    let url = format!(
-        "{}/@anthropic-ai/claude-code",
-        registry.trim_end_matches('/')
-    );
+fn parse_platform_spec<'a>(
+    platform_dependency_name: &'a str,
+    version_spec: &'a str,
+) -> (&'a str, &'a str) {
+    if let Some(alias) = version_spec.strip_prefix("npm:") {
+        if let Some((package_name, version)) = alias.rsplit_once('@') {
+            return (package_name, version);
+        }
+    }
+
+    if let Some((_, version)) = version_spec.rsplit_once('@') {
+        (platform_dependency_name, version)
+    } else {
+        (platform_dependency_name, version_spec)
+    }
+}
+
+async fn resolve_latest(
+    client: &reqwest::Client,
+    registry: &str,
+    package_name: &str,
+) -> Result<String> {
+    let url = format!("{}/{}", registry.trim_end_matches('/'), package_name);
 
     let packument: Packument = client
         .get(&url)

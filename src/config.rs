@@ -40,13 +40,35 @@ pub fn cache_dir() -> PathBuf {
     ccvm_dir().join("cache")
 }
 
+pub fn codex_dir() -> PathBuf {
+    ccvm_dir().join("codex")
+}
+
+pub fn codex_versions_dir() -> PathBuf {
+    codex_dir().join("versions")
+}
+
+pub fn codex_cache_dir() -> PathBuf {
+    codex_dir().join("cache")
+}
+
 #[allow(dead_code)]
 pub fn current_file() -> PathBuf {
     ccvm_dir().join("current")
 }
 
+pub fn codex_current_file() -> PathBuf {
+    codex_dir().join("current")
+}
+
 pub fn ensure_dirs() -> Result<()> {
-    let dirs = [versions_dir(), bin_dir(), cache_dir()];
+    let dirs = [
+        versions_dir(),
+        bin_dir(),
+        cache_dir(),
+        codex_versions_dir(),
+        codex_cache_dir(),
+    ];
     for d in &dirs {
         fs::create_dir_all(d)
             .with_context(|| format!("failed to create directory: {}", d.display()))?;
@@ -57,8 +79,7 @@ pub fn ensure_dirs() -> Result<()> {
 pub fn load_config() -> Result<Config> {
     let path = config_path();
     if path.exists() {
-        let content =
-            fs::read_to_string(&path).with_context(|| "failed to read config.toml")?;
+        let content = fs::read_to_string(&path).with_context(|| "failed to read config.toml")?;
         toml::from_str(&content).with_context(|| "failed to parse config.toml")
     } else {
         Ok(Config::default())

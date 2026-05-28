@@ -35,8 +35,8 @@ pub async fn download_tarball(url: &str, dest: &Path) -> Result<PathBuf> {
             .progress_chars("=>-"),
     );
 
-    let mut file =
-        std::fs::File::create(dest).with_context(|| format!("failed to create {}", dest.display()))?;
+    let mut file = std::fs::File::create(dest)
+        .with_context(|| format!("failed to create {}", dest.display()))?;
     let mut downloaded: u64 = 0;
 
     loop {

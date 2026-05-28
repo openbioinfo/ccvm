@@ -13,15 +13,28 @@ pub fn run() -> Result<()> {
         println!("created {}", config_path.display());
     }
 
-    // Copy shim binary to ~/.ccvm/bin/
-    let shim_dest = config::bin_dir().join("claude.exe");
+    // Copy shim binaries to ~/.ccvm/bin/
+    let shim_dest = config::bin_dir().join(crate::platform::executable_name("claude"));
     if !shim_dest.exists() {
-        match copy_shim(&shim_dest) {
+        match copy_shim("ccvm-shim", &shim_dest) {
             Ok(_) => println!("installed shim to {}", shim_dest.display()),
             Err(e) => eprintln!("warning: could not install shim: {}", e),
         }
     } else {
         println!("shim already installed at {}", shim_dest.display());
+    }
+
+    let codex_shim_dest = config::bin_dir().join(crate::platform::executable_name("codex"));
+    if !codex_shim_dest.exists() {
+        match copy_shim("ccvm-codex-shim", &codex_shim_dest) {
+            Ok(_) => println!("installed codex shim to {}", codex_shim_dest.display()),
+            Err(e) => eprintln!("warning: could not install codex shim: {}", e),
+        }
+    } else {
+        println!(
+            "codex shim already installed at {}",
+            codex_shim_dest.display()
+        );
     }
 
     println!();
@@ -56,7 +69,11 @@ fn update_path() {
 fn try_update_path(bin_dir: &PathBuf, bin_str: &str) -> bool {
     // Query current user PATH
     let current = match std::process::Command::new("powershell.exe")
-        .args(["-NoProfile", "-Command", "[Environment]::GetEnvironmentVariable('PATH', 'User')"])
+        .args([
+            "-NoProfile",
+            "-Command",
+            "[Environment]::GetEnvironmentVariable('PATH', 'User')",
+        ])
         .output()
     {
         Ok(out) => String::from_utf8_lossy(&out.stdout).trim().to_string(),
@@ -64,7 +81,11 @@ fn try_update_path(bin_dir: &PathBuf, bin_str: &str) -> bool {
     };
 
     // Case-insensitive dedup on Windows
-    if current.to_lowercase().split(';').any(|p| p == bin_str.to_lowercase()) {
+    if current
+        .to_lowercase()
+        .split(';')
+        .any(|p| p == bin_str.to_lowercase())
+    {
         println!("PATH already contains {}", bin_dir.display());
         return true;
     }
@@ -86,7 +107,10 @@ fn try_update_path(bin_dir: &PathBuf, bin_str: &str) -> bool {
         .status()
     {
         Ok(s) if s.success() => {
-            println!("added {} to user PATH (restart terminal to take effect)", bin_dir.display());
+            println!(
+                "added {} to user PATH (restart terminal to take effect)",
+                bin_dir.display()
+            );
             true
         }
         _ => false,
@@ -159,7 +183,7 @@ fn try_update_path(bin_dir: &PathBuf, bin_str: &str) -> bool {
     }
 }
 
-fn copy_shim(dest: &PathBuf) -> Result<()> {
+fn copy_shim(binary_stem: &str, dest: &PathBuf) -> Result<()> {
     // Find the shim binary next to the running ccvm binary
     let current_exe =
         std::env::current_exe().with_context(|| "could not determine ccvm binary location")?;
@@ -167,13 +191,14 @@ fn copy_shim(dest: &PathBuf) -> Result<()> {
         .parent()
         .with_context(|| "could not determine ccvm directory")?;
 
-    let shim_src = exe_dir.join("ccvm-shim.exe");
+    let shim_src = exe_dir.join(crate::platform::executable_name(binary_stem));
     if shim_src.exists() {
         fs::copy(&shim_src, dest)
             .with_context(|| format!("failed to copy shim from {}", shim_src.display()))?;
     } else {
         // Create a placeholder script
-        let placeholder = "@echo off\r\necho ccvm shim not yet installed. Run 'ccvm setup' again after building.\r\n";
+        let placeholder =
+            "@echo off\r\necho ccvm shim not yet installed. Run 'ccvm setup' again after building.\r\n";
         fs::write(dest, placeholder)
             .with_context(|| format!("failed to write shim placeholder to {}", dest.display()))?;
     }

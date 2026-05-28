@@ -2,11 +2,13 @@ use std::env;
 use std::io::Read;
 use std::process;
 
+mod platform;
+
 fn main() {
     let version = match resolve_version() {
         Some(v) => v,
         None => {
-            eprintln!("no claude-code version selected. Run 'ccvm use <version>' first.");
+            eprintln!("no codex version selected. Run 'ccvm codex use <version>' first.");
             process::exit(1);
         }
     };
@@ -15,11 +17,22 @@ fn main() {
         .expect("could not determine home directory")
         .join(".ccvm");
 
-    let binary = ccvm_dir.join("versions").join(&version).join("claude.exe");
+    let target_triple = platform::codex_target_triple().unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        process::exit(1);
+    });
+    let binary = ccvm_dir
+        .join("codex")
+        .join("versions")
+        .join(&version)
+        .join("vendor")
+        .join(target_triple)
+        .join("bin")
+        .join(platform::executable_name("codex"));
 
     if !binary.exists() {
         eprintln!(
-            "claude-code version {} is not installed. Run 'ccvm install {}' first.",
+            "codex version {} is not installed. Run 'ccvm codex install {}' first.",
             version, version
         );
         process::exit(1);
@@ -38,15 +51,14 @@ fn main() {
 }
 
 fn resolve_version() -> Option<String> {
-    // 1. Look for .ccvmrc in current dir and up to root
-    if let Some(v) = find_ccvmrc() {
+    if let Some(v) = find_codexvmrc() {
         return Some(v);
     }
 
-    // 2. Fall back to ~/.ccvm/current
     let current_file = dirs::home_dir()
         .expect("could not determine home directory")
         .join(".ccvm")
+        .join("codex")
         .join("current");
 
     if current_file.exists() {
@@ -64,11 +76,11 @@ fn resolve_version() -> Option<String> {
     None
 }
 
-fn find_ccvmrc() -> Option<String> {
+fn find_codexvmrc() -> Option<String> {
     let mut dir = env::current_dir().ok()?;
 
     loop {
-        let rc_path = dir.join(".ccvmrc");
+        let rc_path = dir.join(".codexvmrc");
         if rc_path.exists() {
             let mut content = String::new();
             std::fs::File::open(&rc_path)
@@ -82,7 +94,7 @@ fn find_ccvmrc() -> Option<String> {
         }
 
         if !dir.pop() {
-            break; // reached root
+            break;
         }
     }
 
