@@ -8,6 +8,20 @@ The default registry is `https://registry.npmmirror.com` for faster downloads in
 
 ## Quick Start
 
+### Linux / macOS one-line install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.sh | sh
+```
+
+Install a specific version:
+
+```bash
+VERSION=0.2.0 curl -fsSL https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.sh | sh
+```
+
+Restart your terminal after installation.
+
 ### Windows one-line install
 
 ```powershell
