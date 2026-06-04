@@ -48,6 +48,43 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}.tar.gz
 
+  build-windows:
+    name: Build Windows (${{ matrix.target }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            artifact: ccvm-windows-x64
+          - target: aarch64-pc-windows-msvc
+            artifact: ccvm-windows-arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (zip)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/ccvm.exe" dist/
+          Copy-Item "target/${{ matrix.target }}/release/ccvm-shim.exe" dist/
+          Copy-Item "target/${{ matrix.target }}/release/ccvm-codex-shim.exe" dist/
+          Compress-Archive -Path dist/* -DestinationPath "${{ matrix.artifact }}.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.zip
+
   build-macos:
     name: Build macOS (${{ matrix.target }})
     runs-on: macos-latest
@@ -86,7 +123,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build-linux, build-macos]
+    needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
 
     steps:
@@ -103,4 +140,6 @@ jobs:
             ccvm-linux-arm64.tar.gz
             ccvm-macos-x64.tar.gz
             ccvm-macos-arm64.tar.gz
+            ccvm-windows-x64.zip
+            ccvm-windows-arm64.zip
           generate_release_notes: true
