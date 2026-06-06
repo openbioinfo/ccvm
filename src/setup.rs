@@ -203,5 +203,8 @@ fn copy_shim(binary_stem: &str, dest: &PathBuf) -> Result<()> {
             .with_context(|| format!("failed to write shim placeholder to {}", dest.display()))?;
     }
 
+    crate::platform::set_executable(dest)
+        .with_context(|| format!("failed to set executable permissions on {}", dest.display()))?;
+
     Ok(())
 }

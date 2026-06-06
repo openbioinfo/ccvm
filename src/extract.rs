@@ -80,6 +80,9 @@ pub fn extract_and_verify(
     fs::write(&dest_binary, &binary_data)
         .with_context(|| format!("failed to write {}", dest_binary.display()))?;
 
+    crate::platform::set_executable(&dest_binary)
+        .with_context(|| format!("failed to set executable permissions on {}", dest_binary.display()))?;
+
     println!(
         "installed claude-code {} to {}",
         version,
@@ -156,6 +159,9 @@ pub fn extract_codex_and_verify(
             dest_binary.display()
         );
     }
+
+    crate::platform::set_executable(&dest_binary)
+        .with_context(|| format!("failed to set executable permissions on {}", dest_binary.display()))?;
 
     println!("installed codex {} to {}", version, dest_dir.display());
 

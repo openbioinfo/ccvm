@@ -38,3 +38,18 @@ pub fn executable_name(name: &str) -> String {
         name.to_string()
     }
 }
+
+#[cfg(unix)]
+pub fn set_executable<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<()> {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&path)?.permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&path, perms)
+}
+
+#[cfg(not(unix))]
+pub fn set_executable<P: AsRef<std::path::Path>>(_path: P) -> std::io::Result<()> {
+    Ok(())
+}
+

@@ -674,6 +674,9 @@ async fn npm_fallback(version: &str) -> Result<(), anyhow::Error> {
     std::fs::copy(&binary_path, &dest_binary)
         .with_context(|| format!("failed to copy binary to {}", dest_binary.display()))?;
 
+    crate::platform::set_executable(&dest_binary)
+        .with_context(|| format!("failed to set executable permissions on {}", dest_binary.display()))?;
+
     // Clean up temp directory
     std::fs::remove_dir_all(&temp_dir).ok();
 
