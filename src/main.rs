@@ -68,6 +68,9 @@ enum CodexCommands {
     Install {
         /// Version to install, e.g. "0.134.0" or "latest"
         version: String,
+        /// Install without switching to the new version
+        #[arg(long)]
+        no_use: bool,
     },
     /// Switch to an installed Codex version
     Use {
@@ -306,8 +309,8 @@ async fn run() -> Result<()> {
 
 async fn handle_codex(command: CodexCommands, registry: &str) -> Result<()> {
     match command {
-        CodexCommands::Install { version } => {
-            install_codex(registry, &version).await;
+        CodexCommands::Install { version, no_use } => {
+            install_codex(registry, &version, no_use).await?;
         }
         CodexCommands::Use { version } => {
             match resolve_fuzzy_in_dir(&version, config::codex_versions_dir()) {
@@ -353,7 +356,7 @@ async fn handle_codex(command: CodexCommands, registry: &str) -> Result<()> {
     Ok(())
 }
 
-async fn install_codex(registry: &str, version: &str) {
+async fn install_codex(registry: &str, version: &str, no_use: bool) -> Result<()> {
     println!("resolving codex {} from {}...", version, registry);
     match registry::resolve_codex_package(registry, version).await {
         Ok(pkg) => {
@@ -365,10 +368,17 @@ async fn install_codex(registry: &str, version: &str) {
             let cache_path = config::codex_cache_dir().join(filename);
             match download::download_tarball(&pkg.tarball_url, &cache_path).await {
                 Ok(path) => {
-                    if let Err(e) =
-                        extract::extract_codex_and_verify(&path, &pkg.shasum, &pkg.version)
-                    {
-                        eprintln!("error: {}", e);
+                    match extract::extract_codex_and_verify(&path, &pkg.shasum, &pkg.version) {
+                        Ok(_dest) => {
+                            if !no_use {
+                                activate_version(
+                                    &pkg.version,
+                                    &config::codex_current_file(),
+                                    "codex",
+                                )?;
+                            }
+                        }
+                        Err(e) => eprintln!("error: {}", e),
                     }
                 }
                 Err(e) => eprintln!("error: {}", e),
@@ -376,6 +386,8 @@ async fn install_codex(registry: &str, version: &str) {
         }
         Err(e) => eprintln!("error: {}", e),
     }
+
+    Ok(())
 }
 
 fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
