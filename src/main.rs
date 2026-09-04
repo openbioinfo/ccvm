@@ -25,6 +25,9 @@ enum Commands {
     Install {
         /// Version to install, e.g. "2.1.126" or "latest"
         version: String,
+        /// Install without switching to the new version
+        #[arg(long)]
+        no_use: bool,
     },
     /// Switch to an installed version
     Use {
@@ -125,7 +128,7 @@ async fn run() -> Result<()> {
     };
 
     match cli.command {
-        Commands::Install { version } => {
+        Commands::Install { version, no_use } => {
             println!("resolving {} from {}...", version, registry);
             match registry::resolve_package(&registry, &version).await {
                 Ok(pkg) => {
@@ -138,7 +141,15 @@ async fn run() -> Result<()> {
                     match download::download_tarball(&pkg.tarball_url, &cache_path).await {
                         Ok(path) => {
                             match extract::extract_and_verify(&path, &pkg.shasum, &pkg.version) {
-                                Ok(_dest) => {}
+                                Ok(_dest) => {
+                                    if !no_use {
+                                        activate_version(
+                                            &pkg.version,
+                                            &config::current_file(),
+                                            "claude-code",
+                                        )?;
+                                    }
+                                }
                                 Err(e) => eprintln!("error: {}", e),
                             }
                         }
