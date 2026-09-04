@@ -56,7 +56,7 @@ ccvm setup
 ## Claude Code
 
 ```bash
-ccvm install latest       # install the latest Claude Code version
+ccvm install latest       # install and switch to the latest Claude Code version
 ccvm install 2.1.126      # install a specific version
 ccvm use 2.1.126          # switch to that version
 ccvm current              # show the active Claude Code version
@@ -74,7 +74,7 @@ The `claude` shim checks `.ccvmrc` from the current directory up to the filesyst
 ## OpenAI Codex
 
 ```bash
-ccvm codex install latest  # install the latest Codex version
+ccvm codex install latest  # install and switch to the latest Codex version
 ccvm codex install 0.134.0 # install a specific Codex version
 ccvm codex use 0.134       # switch to that version with fuzzy matching
 ccvm codex current         # show the active Codex version
@@ -94,14 +94,14 @@ The `codex` shim checks `.codexvmrc` from the current directory up to the filesy
 | Command | Description |
 |---------|-------------|
 | `ccvm setup` | Initialize directories, install shims, and configure PATH |
-| `ccvm install <version>` | Install Claude Code (`latest` or a version like `2.1.126`) |
+| `ccvm install <version>` | Install Claude Code and switch to it (`latest` or a version like `2.1.126`; add `--no-use` to install without switching) |
 | `ccvm use <version>` | Switch to an installed Claude Code version |
 | `ccvm current` | Show the active Claude Code version |
 | `ccvm list` | List installed Claude Code versions |
 | `ccvm list-remote` | List Claude Code versions available from the registry |
 | `ccvm uninstall <version>` | Remove an installed Claude Code version |
 | `ccvm pin [version]` | Write `.ccvmrc` for Claude Code |
-| `ccvm codex install <version>` | Install Codex (`latest` or a version like `0.134.0`) |
+| `ccvm codex install <version>` | Install Codex and switch to it (`latest` or a version like `0.134.0`; add `--no-use` to install without switching) |
 | `ccvm codex use <version>` | Switch to an installed Codex version |
 | `ccvm codex current` | Show the active Codex version |
 | `ccvm codex list` | List installed Codex versions |
