@@ -8,6 +8,7 @@ mod setup;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use std::collections::HashMap;
 
 #[derive(Parser)]
 #[command(name = "ccvm", about = "Claude Code Version Manager")]
@@ -37,7 +38,11 @@ enum Commands {
     /// List installed versions
     List,
     /// List available versions from the registry
-    ListRemote,
+    ListRemote {
+        /// List all versions (default shows the latest 20)
+        #[arg(long)]
+        all: bool,
+    },
     /// Show the currently active version
     Current,
     /// Uninstall a version
@@ -79,8 +84,12 @@ enum CodexCommands {
     },
     /// List installed Codex versions
     List,
-    /// List available Codex versions from the registry
-    ListRemote,
+    /// List available versions from the registry
+    ListRemote {
+        /// List all versions (default shows the latest 20)
+        #[arg(long)]
+        all: bool,
+    },
     /// Show the currently active Codex version
     Current,
     /// Uninstall a Codex version
@@ -219,12 +228,8 @@ async fn run() -> Result<()> {
                 }
             }
         }
-        Commands::ListRemote => match list_remote(&registry).await {
-            Ok(versions) => {
-                for v in &versions {
-                    println!("{}", v);
-                }
-            }
+        Commands::ListRemote { all } => match list_remote(&registry).await {
+            Ok(listing) => print_remote_listing(&listing, all),
             Err(e) => eprintln!("error: {}", e),
         },
         Commands::Current => {
@@ -327,14 +332,22 @@ async fn handle_codex(command: CodexCommands, registry: &str) -> Result<()> {
                 "codex",
             );
         }
-        CodexCommands::ListRemote => match list_remote_package(registry, "@openai/codex").await {
-            Ok(versions) => {
-                for v in versions.iter().filter(|v| !is_platform_version(v)) {
-                    println!("{}", v);
+        CodexCommands::ListRemote { all } => {
+            match list_remote_package(registry, "@openai/codex").await {
+                Ok(listing) => {
+                    let filtered = RemoteListing {
+                        versions: listing
+                            .versions
+                            .into_iter()
+                            .filter(|v| !is_platform_version(v))
+                            .collect(),
+                        dist_tags: listing.dist_tags,
+                    };
+                    print_remote_listing(&filtered, all);
                 }
+                Err(e) => eprintln!("error: {}", e),
             }
-            Err(e) => eprintln!("error: {}", e),
-        },
+        }
         CodexCommands::Current => {
             print_current(config::codex_current_file(), "codex");
         }
@@ -460,17 +473,32 @@ fn resolve_fuzzy_in_dir(version: &str, versions_dir: PathBuf) -> anyhow::Result<
     Ok(resolved)
 }
 
-async fn list_remote(registry: &str) -> anyhow::Result<Vec<String>> {
-    list_remote_package(registry, "@anthropic-ai/claude-code").await
+const NATIVE_BOUNDARY: &str = "2.1.113";
+const DEFAULT_LIST_LIMIT: usize = 20;
+
+struct RemoteListing {
+    versions: Vec<String>,            // semver 降序
+    dist_tags: HashMap<String, String>, // tag -> version
 }
 
-async fn list_remote_package(registry: &str, package_name: &str) -> anyhow::Result<Vec<String>> {
+async fn list_remote(registry: &str) -> anyhow::Result<RemoteListing> {
+    let mut listing = list_remote_package(registry, "@anthropic-ai/claude-code").await?;
+    let boundary = semver::Version::parse(NATIVE_BOUNDARY).unwrap();
+    listing.versions.retain(|v| {
+        semver::Version::parse(v)
+            .map(|parsed| parsed >= boundary)
+            .unwrap_or(true) // keep non-semver keys
+    });
+    Ok(listing)
+}
+
+async fn list_remote_package(registry: &str, package_name: &str) -> anyhow::Result<RemoteListing> {
     let client = reqwest::Client::new();
     let url = format!("{}/{}", registry.trim_end_matches('/'), package_name);
 
     let packument: serde_json::Value = client
         .get(&url)
-        .header("Accept", "application/json")
+        .header("Accept", "application/vnd.npm.install-v1+json")
         .send()
         .await
         .with_context(|| format!("failed to fetch from {}", url))?
@@ -491,7 +519,43 @@ async fn list_remote_package(registry: &str, package_name: &str) -> anyhow::Resu
             .cmp(&semver::Version::parse(a).unwrap_or_else(|_| semver::Version::new(0, 0, 0)))
     });
 
-    Ok(versions)
+    let dist_tags: HashMap<String, String> = packument["dist-tags"]
+        .as_object()
+        .map(|o| {
+            o.iter()
+                .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(RemoteListing { versions, dist_tags })
+}
+
+fn print_remote_listing(listing: &RemoteListing, all: bool) {
+    let total = listing.versions.len();
+    let shown = if all { total } else { total.min(DEFAULT_LIST_LIMIT) };
+
+    for v in listing.versions.iter().take(shown) {
+        let mut tags: Vec<&str> = listing
+            .dist_tags
+            .iter()
+            .filter(|(_, ver)| *ver == v)
+            .map(|(tag, _)| tag.as_str())
+            .collect();
+        tags.sort();
+        if tags.is_empty() {
+            println!("{}", v);
+        } else {
+            println!("{} ({})", v, tags.join(", "));
+        }
+    }
+
+    if !all && total > DEFAULT_LIST_LIMIT {
+        println!(
+            "... and {} more. Use --all to list all.",
+            total - DEFAULT_LIST_LIMIT
+        );
+    }
 }
 
 fn is_platform_version(version: &str) -> bool {

@@ -98,14 +98,14 @@ The `codex` shim checks `.codexvmrc` from the current directory up to the filesy
 | `ccvm use <version>` | Switch to an installed Claude Code version |
 | `ccvm current` | Show the active Claude Code version |
 | `ccvm list` | List installed Claude Code versions |
-| `ccvm list-remote` | List Claude Code versions available from the registry |
+| `ccvm list-remote` | List Claude Code versions available from the registry (latest 20 by default; add `--all` for the full list) |
 | `ccvm uninstall <version>` | Remove an installed Claude Code version |
 | `ccvm pin [version]` | Write `.ccvmrc` for Claude Code |
 | `ccvm codex install <version>` | Install Codex and switch to it (`latest` or a version like `0.134.0`; add `--no-use` to install without switching) |
 | `ccvm codex use <version>` | Switch to an installed Codex version |
 | `ccvm codex current` | Show the active Codex version |
 | `ccvm codex list` | List installed Codex versions |
-| `ccvm codex list-remote` | List Codex versions available from the registry |
+| `ccvm codex list-remote` | List Codex versions available from the registry (latest 20 by default; add `--all` for the full list) |
 | `ccvm codex uninstall <version>` | Remove an installed Codex version |
 | `ccvm codex pin [version]` | Write `.codexvmrc` for Codex |
 | `ccvm config registry` | Show the current registry URL |
