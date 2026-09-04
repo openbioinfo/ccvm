@@ -164,7 +164,7 @@ async fn run() -> Result<()> {
                     if msg.contains("predates native binary") {
                         eprintln!("{}", msg);
                         eprintln!();
-                        if let Err(e) = npm_fallback(&version).await {
+                        if let Err(e) = npm_fallback(&version, no_use).await {
                             eprintln!("error: {}", e);
                         }
                     } else {
@@ -635,7 +635,7 @@ fn pin_version(
     Ok(())
 }
 
-async fn npm_fallback(version: &str) -> Result<(), anyhow::Error> {
+async fn npm_fallback(version: &str, no_use: bool) -> Result<(), anyhow::Error> {
     // Check for Node.js
     let node_check = std::process::Command::new("node").arg("--version").output();
     if node_check.is_err() {
@@ -717,6 +717,10 @@ async fn npm_fallback(version: &str) -> Result<(), anyhow::Error> {
         version,
         dest_dir.display()
     );
+
+    if !no_use {
+        activate_version(version, &config::current_file(), "claude-code")?;
+    }
 
     Ok(())
 }
