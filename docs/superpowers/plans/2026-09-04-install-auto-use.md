@@ -74,9 +74,9 @@ fn activate_version(
 Run: `cargo build`
 Expected: 编译成功，无警告新增。
 
-Run: `cargo run -- use <已安装版本>`
-（先 `cargo run -- list` 看一个已装版本号，没有就先 `cargo run -- install 2.1.126` 安装。）
-Expected: 输出 `now using claude-code <版本>`，且 `cargo run -- current` 显示该版本。行为与改动前完全一致。
+Run: `cargo run --bin ccvm -- use <已安装版本>`
+（先 `cargo run --bin ccvm -- list` 看一个已装版本号，没有就先 `cargo run --bin ccvm -- install 2.1.126` 安装。）
+Expected: 输出 `now using claude-code <版本>`，且 `cargo run --bin ccvm -- current` 显示该版本。行为与改动前完全一致。
 
 - [ ] **Step 4: Commit**
 
@@ -168,11 +168,11 @@ git commit -m "refactor: extract activate_version helper, reuse in use command"
 Run: `cargo build`
 Expected: 编译成功。
 
-Run: `cargo run -- install 2.1.126 --no-use`
-Expected: 安装输出照常，但**没有** `now using ...`，且 `cargo run -- current` 不是 2.1.126（若之前启用的是别的版本）。
+Run: `cargo run --bin ccvm -- install 2.1.126 --no-use`
+Expected: 安装输出照常，但**没有** `now using ...`，且 `cargo run --bin ccvm -- current` 不是 2.1.126（若之前启用的是别的版本）。
 
-Run: `cargo run -- install 2.1.126`
-Expected: 安装输出照常，且输出 `now using claude-code 2.1.126`，`cargo run -- current` 显示 `2.1.126`。
+Run: `cargo run --bin ccvm -- install 2.1.126`
+Expected: 安装输出照常，且输出 `now using claude-code 2.1.126`，`cargo run --bin ccvm -- current` 显示 `2.1.126`。
 
 - [ ] **Step 4: Commit**
 
@@ -305,11 +305,11 @@ async fn install_codex(registry: &str, version: &str, no_use: bool) -> Result<()
 Run: `cargo build`
 Expected: 编译成功。
 
-Run: `cargo run -- codex install 0.134.0 --no-use`
-Expected: 安装输出照常，无 `now using codex ...`，`cargo run -- codex current` 不是 0.134.0（若之前启用的是别的版本）。
+Run: `cargo run --bin ccvm -- codex install 0.134.0 --no-use`
+Expected: 安装输出照常，无 `now using codex ...`，`cargo run --bin ccvm -- codex current` 不是 0.134.0（若之前启用的是别的版本）。
 
-Run: `cargo run -- codex install 0.134.0`
-Expected: 输出 `now using codex 0.134.0`，`cargo run -- codex current` 显示 `0.134.0`。
+Run: `cargo run --bin ccvm -- codex install 0.134.0`
+Expected: 输出 `now using codex 0.134.0`，`cargo run --bin ccvm -- codex current` 显示 `0.134.0`。
 
 - [ ] **Step 6: Commit**
 
@@ -394,7 +394,7 @@ async fn npm_fallback(version: &str, no_use: bool) -> Result<(), anyhow::Error> 
 Run: `cargo build`
 Expected: 编译成功。
 
-（fallback 路径需 Node.js 且只对 < 2.1.113 版本触发；无 Node.js 环境时以编译通过 + 逻辑审查为准。有环境则可试 `cargo run -- install 2.1.100 --no-use` 走 y 确认后观察无 `now using`。）
+（fallback 路径需 Node.js 且只对 < 2.1.113 版本触发；无 Node.js 环境时以编译通过 + 逻辑审查为准。有环境则可试 `cargo run --bin ccvm -- install 2.1.100 --no-use` 走 y 确认后观察无 `now using`。）
 
 - [ ] **Step 5: Commit**
 
@@ -474,7 +474,7 @@ git commit -m "docs: document install auto-switch and --no-use"
 ### 收尾验证（全部任务完成后）
 
 - [ ] `cargo build --release` 通过
-- [ ] `cargo run -- install 2.1.126` → 输出含 `now using claude-code 2.1.126`
-- [ ] `cargo run -- install 2.1.126 --no-use` → 无 `now using`
-- [ ] `cargo run -- codex install 0.134.0` → 输出含 `now using codex 0.134.0`
-- [ ] `cargo run -- codex install 0.134.0 --no-use` → 无 `now using`
+- [ ] `cargo run --bin ccvm -- install 2.1.126` → 输出含 `now using claude-code 2.1.126`
+- [ ] `cargo run --bin ccvm -- install 2.1.126 --no-use` → 无 `now using`
+- [ ] `cargo run --bin ccvm -- codex install 0.134.0` → 输出含 `now using codex 0.134.0`
+- [ ] `cargo run --bin ccvm -- codex install 0.134.0 --no-use` → 无 `now using`
