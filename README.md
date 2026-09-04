@@ -57,7 +57,7 @@ ccvm setup
 
 ```bash
 ccvm install latest       # install and switch to the latest Claude Code version
-ccvm install 2.1.126      # install a specific version
+ccvm install 2.1.126      # install and switch to a specific version
 ccvm use 2.1.126          # switch to that version
 ccvm current              # show the active Claude Code version
 claude --version          # shim resolves to the active version

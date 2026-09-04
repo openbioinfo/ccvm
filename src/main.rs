@@ -315,9 +315,7 @@ async fn handle_codex(command: CodexCommands, registry: &str) -> Result<()> {
         CodexCommands::Use { version } => {
             match resolve_fuzzy_in_dir(&version, config::codex_versions_dir()) {
                 Ok(resolved) => {
-                    std::fs::write(config::codex_current_file(), &resolved)
-                        .with_context(|| "failed to write current Codex version")?;
-                    println!("now using codex {}", resolved);
+                    activate_version(&resolved, &config::codex_current_file(), "codex")?;
                 }
                 Err(e) => eprintln!("error: {}", e),
             }
