@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.sh 
 Install a specific version:
 
 ```bash
-VERSION=0.2.0 curl -fsSL https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.sh | sh
+VERSION=0.3.0 curl -fsSL https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.sh | sh
 ```
 
 Restart your terminal after installation.
@@ -31,7 +31,7 @@ irm https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.ps1 | iex
 Install a specific ccvm release:
 
 ```powershell
-irm https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.ps1 | iex -args "-Version 0.2.0"
+irm https://raw.githubusercontent.com/openbioinfo/ccvm/master/install.ps1 | iex -args "-Version 0.3.0"
 ```
 
 Restart your terminal after installation.
