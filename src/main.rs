@@ -161,9 +161,7 @@ async fn run() -> Result<()> {
         }
         Commands::Use { version } => match resolve_fuzzy(&version) {
             Ok(resolved) => {
-                std::fs::write(config::current_file(), &resolved)
-                    .with_context(|| "failed to write current version")?;
-                println!("now using claude-code {}", resolved);
+                activate_version(&resolved, &config::current_file(), "claude-code")?;
             }
             Err(e) => eprintln!("error: {}", e),
         },
@@ -371,6 +369,17 @@ async fn install_codex(registry: &str, version: &str) {
 
 fn resolve_fuzzy(version: &str) -> anyhow::Result<String> {
     resolve_fuzzy_in_dir(version, config::versions_dir())
+}
+
+fn activate_version(
+    version: &str,
+    current_file: &std::path::Path,
+    tool_name: &str,
+) -> anyhow::Result<()> {
+    std::fs::write(current_file, version)
+        .with_context(|| format!("failed to write current {} version", tool_name))?;
+    println!("now using {} {}", tool_name, version);
+    Ok(())
 }
 
 fn resolve_fuzzy_in_dir(version: &str, versions_dir: PathBuf) -> anyhow::Result<String> {
