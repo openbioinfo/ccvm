@@ -57,12 +57,13 @@ fn activate_version(
 - `npm_fallback(version)` 签名改为 `npm_fallback(version, no_use)`，由 install
   分支传入。
 
-### 已知边界：npm-fallback 的 `latest`
+### 已知边界：npm-fallback 的版本号来源
 
-npm-fallback 仅在 registry 解析**失败**时被调用，此时 `version` 是用户原始输入。
-若用户输入 `latest` 且走 fallback（现实中 < 2.1.113 才有 fallback，`latest` 必然
-解析成功，此路径实际上不可达），激活的目录名可能与实际不符。不为此增加代码——
-该组合不可达，YAGNI。
+npm-fallback 收到的 `version` 是用户原始输入。但 fallback 的唯一触发条件是错误消息
+含 "predates native binary"，这只在用户指定了 < 2.1.113 的精确版本时发生——此时
+`version` 就是精确版本，目录名与 `npm install @...@{version}` 安装的版本一致。
+用户输入 `latest` 时 `resolve_latest` 返回当前 latest（≥ 2.1.113，有平台包），
+不会触发 fallback。故 fallback 路径无需额外处理，激活写 `version` 即正确。
 
 ## 错误处理
 
